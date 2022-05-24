@@ -1,4 +1,5 @@
-from re import M
+from dis import dis
+from re import M, T
 from pymavlink import mavutil
 from pymavlink import mavwp
 import sys
@@ -197,20 +198,33 @@ def goto_wp(master, sys_time: int, type: str, mask: str = 'Use_Position', positi
     else:
         raise TypeError('Undefined frame type')
 
-    msg = master.recv_match(type='COMMAND_ACK', blocking=True)
+    msg = master.recv_match(type='COMMAND_ACK', blocking=False)
     print(msg)
 
-def get_wp_distance(master, type: str, coordi: list) -> float:
-    msg = master.recv_match(type=_type, blocking=True)
-    print(msg)
+def arrived_wp(master, type: str, coordi: list, error: float = 1.0) -> bool:
     if type == 'local':
         _type = 'LOCAL_POSITION_NED'
-        target = np.array([msg.x, msg.y, msg.z])
+        while True:
+            msg = master.recv_match(type=_type, blocking=True)
+            target = np.array([msg.x, msg.y, msg.z])
+            now_position = np.array(coordi)
+            distance = LA.norm(now_position - target)
+            if distance < error:
+                print('arrived wq')
+                break
+            else:
+                print(f'distance to next wq: {distance}')
     elif type == 'global':
         _type = 'GLOBAL_POSITION_INT'
-        target = np.array([msg.lat, msg.lon, msg.alt])
+        while True:
+            msg = master.recv_match(type=_type, blocking=True)
+            target = np.array([msg.lat, msg.lon, msg.alt])
+            now_position = np.array(coordi)
+            distance = LA.norm(now_position - target)
+            if distance < error:
+                print('arrived wq')
+                break
+            else:
+                print(f'distance to next wq: {distance}')
     else:
-        raise TypeError('Undefined frame type')
-
-    now_position = np.array(coordi)
-    return LA.norm(now_position - target)
+        raise TypeError('Undefined frame type')    
