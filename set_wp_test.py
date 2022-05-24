@@ -16,9 +16,9 @@ if __name__ == '__main__':
     arm(master)
     msg = master.recv_match(type='COMMAND_ACK', blocking=True)
     print(msg)
-    # takeoff(master, 10)
-    # msg = master.recv_match(type='COMMAND_ACK', blocking=True)
-    # print(msg)
+    takeoff(master, 10)
+    msg = master.recv_match(type='COMMAND_ACK', blocking=True)
+    print(msg)
     upload_mission(master, './mission.txt')
     msg = master.recv_match(type='MISSION_ACK', blocking=True)
     print(msg)
@@ -28,7 +28,7 @@ if __name__ == '__main__':
             # msg = master.recv_match(type='LOCAL_POSITION_NED', blocking=True)
             msg = master.recv_match(type='GLOBAL_POSITION_INT', blocking=True)
             print(msg)
-            time.sleep(1)
+            time.sleep(5)
         except KeyboardInterrupt:
             break
 
