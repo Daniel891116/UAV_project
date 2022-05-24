@@ -22,9 +22,11 @@ msg = master.recv_match(type='COMMAND_ACK', blocking=True)
 print(msg)
 
 time.sleep(10)
-goto_wp(master, 1e3 * (time.time() - boot_time), type = 'local', mask = 'Use_Position', position = [40, 0, -10, 0, 0, 0, 0, 0, 0, 1.57, 0.5])
+goto_wp(master, int(1e3 * (time.time() - boot_time)), type = 'local', mask = 'Use_Position', position = [40, 0, -10, 0, 0, 0, 0, 0, 0, 1.57, 0.5])
 arrived_wp(master, type = 'local', coordi = [40, 0, -10], error = wp_error)
-goto_wp(master, 1e3 * (time.time() - boot_time), type = 'local', mask = 'Use_Position', position = [40, 40, -10, 0, 0, 0, 0, 0, 0, 1.57, 0.5])
+goto_wp(master, int(1e3 * int(time.time() - boot_time)), type = 'local', mask = 'Use_Position', position = [40, 40, -10, 0, 0, 0, 0, 0, 0, 1.57, 0.5])
 arrived_wp(master, type = 'local', coordi = [40, 40, -10], error = wp_error)
-
-
+goto_wp(master, int(1e3 * int(time.time() - boot_time)), type = 'local', mask = 'Use_Position', position = [40, 40, -10, 0, 0, 0, 0, 0, 0, 1.57, 0.5])
+arrived_wp(master, type = 'local', coordi = [0, 40, -10], error = wp_error)
+goto_wp(master, int(1e3 * int(time.time() - boot_time)), type = 'local', mask = 'Use_Position', position = [40, 40, -10, 0, 0, 0, 0, 0, 0, 1.57, 0.5])
+arrived_wp(master, type = 'local', coordi = [0, 0, -10], error = wp_error)
