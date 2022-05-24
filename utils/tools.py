@@ -201,14 +201,13 @@ def goto_wp(master, sys_time: int, type: str, mask: str = 'Use_Position', positi
     print(msg)
 
 def get_wp_distance(master, type: str, coordi: list) -> float:
+    msg = master.recv_match(type=_type, blocking=True)
+    print(msg)
     if type == 'local':
         _type = 'LOCAL_POSITION_NED'
-        print(msg)
         target = np.array([msg.x, msg.y, msg.z])
     elif type == 'global':
         _type = 'GLOBAL_POSITION_INT'
-        msg = master.recv_match(type=_type, blocking=True)
-        print(msg)
         target = np.array([msg.lat, msg.lon, msg.alt])
     else:
         raise TypeError('Undefined frame type')
