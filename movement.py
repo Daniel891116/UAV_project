@@ -24,13 +24,13 @@ time.sleep(10)
 # master.mav.send(mavutil.mavlink.MAVLink_set_position_target_local_ned_message(20, master.target_system,
 #                         master.target_component, mavutil.mavlink.MAV_FRAME_LOCAL_NED, int(0b110111111000), 40, 0, -10, 0, 0, 0, 0, 0, 0, 1.57, 0.5))
 
-goto_wp(master, time.time(), type = 'local', mask = 'Use_Position', position = [40, 0, -10, 0, 0, 0, 0, 0, 0, 1.57, 0.5])
+goto_wp(master, 20, type = 'local', mask = 'Use_Position', position = [40, 0, -10, 0, 0, 0, 0, 0, 0, 1.57, 0.5])
 
 # master.mav.send(mavutil.mavlink.MAVLink_set_position_target_local_ned_message(20, master.target_system,
 #                         master.target_component, mavutil.mavlink.MAV_FRAME_LOCAL_NED, int(0b110111111000), 10, 0, -10, 0, 0, 0, 0, 0, 0, 1.57, 0.5))
 
-# msg = master.recv_match(type='COMMAND_ACK', blocking=True)
-# print(msg)
+msg = master.recv_match(type='COMMAND_ACK', blocking=False)
+print(msg)
 
 # master.mav.send(mavutil.mavlink.MAVLink_set_position_target_global_int_message(10, master.target_system,
 #                         master.target_component, mavutil.mavlink.MAV_FRAME_GLOBAL_RELATIVE_ALT, int(0b110111111000), int(-35.3629849 * 10 ** 7), int(149.1649185 * 10 ** 7), 10, 0, 0, 0, 0, 0, 0, 1.57, 0.5))
