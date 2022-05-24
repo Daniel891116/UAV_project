@@ -1,5 +1,4 @@
 from pymavlink import mavutil
-from pymavlink import mavwp
 import time
 
 from utils import change_mode, arm, disarm, takeoff, cmd_set_home, upload_mission
@@ -10,8 +9,6 @@ from utils import change_mode, arm, disarm, takeoff, cmd_set_home, upload_missio
 master = mavutil.mavlink_connection('udpin:localhost:14551')
 
 master.wait_heartbeat()
-
-wp = mavwp.MAVWPLoader()
 
 if __name__ == '__main__':
 
@@ -26,7 +23,6 @@ if __name__ == '__main__':
     msg = master.recv_match(type='MISSION_ACK', blocking=True)
     print(msg)
     change_mode(master, "AUTO")
-    master.mav.send(mavutil.mavlink.MAVLINK_cmd_mission_start_send())
     while 1:
         try:
             # msg = master.recv_match(type='LOCAL_POSITION_NED', blocking=True)
