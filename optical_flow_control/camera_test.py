@@ -2,11 +2,15 @@ import re
 import cv2 as cv
 import time
 
-cap = cv.VideoCapture(0)
-cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 0.05)
-cap.set(cv.CAP_PROP_EXPOSURE, -1) 
-cap.set(cv.CAP_PROP_FRAME_WIDTH, 1280)
-cap.set(cv.CAP_PROP_FRAME_HEIGHT, 960)
+cap = cv.VideoCapture('./move.MOV')
+fourcc = cv.VideoWriter_fourcc(*'XVID')
+out = cv.VideoWriter('move.avi',fourcc, 5, (640,480))
+
+# cap = cv.VideoCapture(0)
+# cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 0.05)
+# cap.set(cv.CAP_PROP_EXPOSURE, -1) 
+# cap.set(cv.CAP_PROP_FRAME_WIDTH, 1280)
+# cap.set(cv.CAP_PROP_FRAME_HEIGHT, 960)
 
 while True:
     try:

@@ -3,18 +3,21 @@ import cv2 as cv
 import argparse
 import sys, os
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
 sys.path.append(os.path.join(os.getcwd(), "../")) #append parent dir
-from utils import calCameraMotion
+from utils import calCameraMotion, camera_update
 
 parser = argparse.ArgumentParser()
 # parser.add_argument('--image', type=str, help='path to image file')
 # args = parser.parse_args()
 # cap = cv.VideoCapture(args.image)
-# cap = cv.VideoCapture('./slow_traffic_small.mp4')
-cap = cv.VideoCapture(-1)
+# cap = cv.VideoCapture('./move.MOV')
+# cap.set(3,640)
+# cap.set(4,480)
+cap = cv.VideoCapture(0)
 
-_maxFeature = 8
+_maxFeature = 16
 focal_length_x = 111    # unit px
 focal_length_y = 118.4  # unit px
 
@@ -42,12 +45,18 @@ color = np.random.randint(0,255,(_maxFeature,3))
 # Create 3D env
 fig = plt.figure()
 ax = fig.gca(projection='3d')
+ax.set_xlabel('x')
+ax.set_ylabel('y')
+ax.set_zlabel('z')
+ax.set_title('Tajectory of camera')
+
 origin_camera_pos = np.array([[0], [0], [0]], dtype = np.float64)
 camera_pos = []
-print(origin_camera_pos.shape)
 
 # Take first frame and find corners in it
 ret, old_frame = cap.read()
+old_frame = cv.resize(old_frame, (640, 480)) 
+
 # set camera intrinsic matrix
 camera_h = old_frame.shape[0]
 camera_w = old_frame.shape[1]
@@ -67,6 +76,7 @@ prev_p = p0
 mask = np.zeros_like(old_frame)
 while(1):
     ret,frame = cap.read()
+    frame = cv.resize(frame, (640, 480)) 
     new_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
     # calculate optical flow
     p1, st, err = cv.calcOpticalFlowPyrLK(old_gray, new_gray, p0, None, **lk_params)
@@ -102,5 +112,16 @@ while(1):
     
 camera_pos = np.array(camera_pos)
 camera_pos = np.squeeze(camera_pos, axis = -1)
-ax.plot(camera_pos[:, 0], camera_pos[:, 1], camera_pos[:, 2], marker = 'o', label = 'camera')
+camera_Dots = ax.plot(camera_pos[:, 0], camera_pos[:, 1], camera_pos[:, 2], marker = 'o', markersize = 6)[0]
+ani = animation.FuncAnimation(
+    fig = fig, 
+    func = camera_update, 
+    fargs = (camera_Dots, camera_pos), 
+    frames = camera_pos.shape[0], 
+    interval = 1000/camera_pos.shape[0] * 2, 
+    blit = True
+)
+# plt.savefig("camera_movement.pdf")
 plt.show()
+print('GIF is saving...')
+ani.save('Camera_movement.gif', writer = 'pillow', fps = 1/0.04)
