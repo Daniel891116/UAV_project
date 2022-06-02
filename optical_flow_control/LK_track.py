@@ -2,6 +2,8 @@ import numpy as np
 import cv2 as cv
 import argparse
 import sys, os
+import matplotlib.pyplot as plt
+
 sys.path.append(os.path.join(os.getcwd(), "../")) #append parent dir
 from utils import calCameraMotion
 
@@ -12,7 +14,7 @@ parser = argparse.ArgumentParser()
 # cap = cv.VideoCapture('./slow_traffic_small.mp4')
 cap = cv.VideoCapture(0)
 
-_maxFeature = 8
+_maxFeature = 16
 focal_length_x = 111    # unit px
 focal_length_y = 118.4  # unit px
 
@@ -36,6 +38,13 @@ lk_params = dict( winSize  = (15,15),
 
 # Create some random colors
 color = np.random.randint(0,255,(_maxFeature,3))
+
+# Create 3D env
+fig = plt.figure()
+ax = fig.gca(projection='3d')
+origin_camera_pos = np.array([[0], [0], [0]], dtype = np.float64)
+camera_pos = []
+print(origin_camera_pos.shape)
 
 # Take first frame and find corners in it
 ret, old_frame = cap.read()
@@ -64,10 +73,16 @@ while(1):
     # Select good points
     good_new = p1[st==1]
     good_prev = p0[st==1]
-    calCameraMotion(new_pts = good_new, prev_pts = good_prev, intrinsic_mat = intrinsic_mat)
+    R, T = calCameraMotion(new_pts = good_new, prev_pts = good_prev, intrinsic_mat = intrinsic_mat)
+    
+    # update camera position
+    origin_camera_pos += T
+    camera_pos.append(origin_camera_pos.copy())
+    
     # draw the tracks
-    if (len(good_new) < len(prev_p)):
-        print(f'loss {len(prev_p) - len(good_new)} keypoint(s)')
+    # print(f'detect {len(good_new)} points')
+    # if (len(good_new) < len(prev_p)):
+    #     print(f'loss {len(prev_p) - len(good_new)} keypoint(s)')
     for i,(new,old) in enumerate(zip(good_new, good_prev)):
         a,b = new.ravel()
         c,d = old.ravel()
@@ -75,10 +90,17 @@ while(1):
         frame = cv.circle(frame,(int(a),int(b)),5,color[i].tolist(),-1)
     img = cv.add(frame,mask)
     cv.imshow('frame',img)
+
     k = cv.waitKey(30) & 0xff
     if k == 27:
+        cv.destroyAllWindows()
         break
     # Now update the previous frame and previous points
     old_gray = new_gray.copy()
     p0 = good_new.reshape(-1,1,2)
     prev_p = p0
+    
+camera_pos = np.array(camera_pos)
+camera_pos = np.squeeze(camera_pos, axis = -1)
+ax.plot(camera_pos[:, 0], camera_pos[:, 1], camera_pos[:, 2], marker = 'o', label = 'camera')
+plt.show()
