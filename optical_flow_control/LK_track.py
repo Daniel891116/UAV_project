@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser()
 # cap.set(4,480)
 cap = cv.VideoCapture(0)
 
-_maxFeature = 16
+_maxFeature = 8
 focal_length_x = 111    # unit px
 focal_length_y = 118.4  # unit px
 
@@ -30,7 +30,7 @@ SIFT_params = dict( nfeatures = _maxFeature,
 
 # params for ShiTomasi corner detection
 feature_params = dict( maxCorners = _maxFeature,
-                       qualityLevel = 0.3,  # Parameter characterizing the minimal accepted quality(eg. 0.3 * Corner Response of best corner) of image corners
+                       qualityLevel = 0.2,  # Parameter characterizing the minimal accepted quality(eg. 0.3 * Corner Response of best corner) of image corners
                        minDistance = 7,     # Minimum possible Euclidean distance between the returned corners
                        blockSize = 7 )
 
@@ -64,13 +64,16 @@ intrinsic_mat = np.array([[focal_length_x, 0, camera_w/2],
                           [0, focal_length_y, camera_h/2],
                           [0, 0, 1]])
 old_gray = cv.cvtColor(old_frame, cv.COLOR_BGR2GRAY)
-# p0 = cv.goodFeaturesToTrack(old_gray, mask = None, **feature_params)
-sift = cv.SIFT_create(**SIFT_params)
-sift_p0 = sift.detect(old_gray, None)
+# ShiTomasi corner detection
+p0 = cv.goodFeaturesToTrack(old_gray, mask = None, **feature_params)
+# SIFT
+# sift = cv.SIFT_create(**SIFT_params)
+# sift_p0 = sift.detect(old_gray, None)
 
-p0 = np.array(list(map(lambda keypoint: list(keypoint.pt), sift_p0)), dtype = np.float32)
-p0 = np.expand_dims(p0, axis = 1)
+# p0 = np.array(list(map(lambda keypoint: list(keypoint.pt), sift_p0)), dtype = np.float32)
+# p0 = np.expand_dims(p0, axis = 1)
 prev_p = p0
+print(f'detech {len(p0)} kps')
 
 # Create a mask image for drawing purposes
 mask = np.zeros_like(old_frame)
@@ -83,6 +86,13 @@ while(1):
     # Select good points
     good_new = p1[st==1]
     good_prev = p0[st==1]
+    if (len(p0) - len(good_prev)):
+        print(f'lost {len(p0) - len(good_prev)} kp')
+        print(f'good_new: \n{good_new}')
+        print(f'good_prev: \n{good_prev}')
+        print(f'st" \n{st}')
+        print(f'p0" \n{p0}')
+
     R, T = calCameraMotion(new_pts = good_new, prev_pts = good_prev, intrinsic_mat = intrinsic_mat)
     
     # update camera position
@@ -122,6 +132,14 @@ ani = animation.FuncAnimation(
     blit = True
 )
 # plt.savefig("camera_movement.pdf")
-plt.show()
-print('GIF is saving...')
-ani.save('Camera_movement.gif', writer = 'pillow', fps = 1/0.04)
+try:
+    plt.show()
+except:
+    pass
+
+gif_save = str(input("want to save this GIF?:[y/n]"))
+if gif_save == 'y':
+    print('GIF is saving...')
+    ani.save('Camera_movement.gif', writer = 'pillow', fps = 1/0.04)
+else:
+    pass
