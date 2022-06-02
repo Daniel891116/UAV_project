@@ -12,9 +12,9 @@ parser = argparse.ArgumentParser()
 # args = parser.parse_args()
 # cap = cv.VideoCapture(args.image)
 # cap = cv.VideoCapture('./slow_traffic_small.mp4')
-cap = cv.VideoCapture(0)
+cap = cv.VideoCapture(-1)
 
-_maxFeature = 16
+_maxFeature = 8
 focal_length_x = 111    # unit px
 focal_length_y = 118.4  # unit px
 
