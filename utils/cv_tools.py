@@ -11,3 +11,14 @@ def calCameraMotion(new_pts: np.ndarray, prev_pts: np.ndarray, intrinsic_mat: np
     # print(f'Transformation: \n{R}')
     # print(f'Transpose: \n{T}')
     return R, T
+
+def camera_update(index: int, camera_Dots, camera_pos: np.ndarray):
+    camera_Dots.set_data(camera_pos[:index, 0:2].T)
+    camera_Dots.set_3d_properties(camera_pos[:index, 2].T)
+    return camera_Dots,
+
+def camera_init(camera_Dots, camera_pos: np.ndarray):
+    camera_Dots.set_data(camera_pos[0, 0:2].T)
+    camera_Dots.set_3d_properties(camera_pos[0, 0:2].T)
+    return camera_Dots,
+    

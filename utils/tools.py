@@ -209,6 +209,7 @@ def arrived_wp(master, type: str, coordi: list, error: float = 1.0) -> bool:
             target = np.array([msg.x, msg.y, msg.z])
             now_position = np.array(coordi)
             distance = LA.norm(now_position - target)
+            print(now_position,target,distance)
             if distance < error:
                 print('arrived wq')
                 break
@@ -218,9 +219,10 @@ def arrived_wp(master, type: str, coordi: list, error: float = 1.0) -> bool:
         _type = 'GLOBAL_POSITION_INT'
         while True:
             msg = master.recv_match(type=_type, blocking=True)
-            target = np.array([msg.lat, msg.lon, msg.alt])
+            target = np.array([msg.lat, msg.lon])
             now_position = np.array(coordi)
             distance = LA.norm(now_position - target)
+            print(now_position,target,distance)
             if distance < error:
                 print('arrived wq')
                 break
