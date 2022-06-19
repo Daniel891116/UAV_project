@@ -230,3 +230,7 @@ def arrived_wp(master, type: str, coordi: list, error: float = 1.0) -> bool:
                 print(f'distance to next wq: {distance}')
     else:
         raise TypeError('Undefined frame type')    
+
+def set_speed(master, sys_time: int, vx: float, vy: float, vz: float):
+    goto_wp(master, sys_time, type = 'local', mask = 'Use_Pos+Vel', position = [0, 0, 0, vx, vy, -vz, 0, 0, 0, 0, 0])
+

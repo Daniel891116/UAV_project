@@ -15,11 +15,11 @@ parser = argparse.ArgumentParser()
 # cap = cv.VideoCapture('./move.MOV')
 # cap.set(3,640)
 # cap.set(4,480)
-cap = cv.VideoCapture(0)
+cap = cv.VideoCapture(1)
 
 _maxFeature = 8
-focal_length_x = 111    # unit px
-focal_length_y = 118.4  # unit px
+focal_length_x = 506 # 111    # unit px
+focal_length_y = 506 # 118.4  # unit px
 
 # params for SIFT detection
 SIFT_params = dict( nfeatures = _maxFeature,
@@ -30,7 +30,7 @@ SIFT_params = dict( nfeatures = _maxFeature,
 
 # params for ShiTomasi corner detection
 feature_params = dict( maxCorners = _maxFeature,
-                       qualityLevel = 0.2,  # Parameter characterizing the minimal accepted quality(eg. 0.3 * Corner Response of best corner) of image corners
+                       qualityLevel = 0.3,  # Parameter characterizing the minimal accepted quality(eg. 0.3 * Corner Response of best corner) of image corners
                        minDistance = 7,     # Minimum possible Euclidean distance between the returned corners
                        blockSize = 7 )
 
@@ -48,7 +48,7 @@ ax = fig.gca(projection='3d')
 ax.set_xlabel('x')
 ax.set_ylabel('y')
 ax.set_zlabel('z')
-ax.set_title('Tajectory of camera')
+ax.set_title('Trajectory of camera')
 
 origin_camera_pos = np.array([[0], [0], [0]], dtype = np.float64)
 camera_pos = []
@@ -60,8 +60,8 @@ old_frame = cv.resize(old_frame, (640, 480))
 # set camera intrinsic matrix
 camera_h = old_frame.shape[0]
 camera_w = old_frame.shape[1]
-intrinsic_mat = np.array([[focal_length_x, 0, camera_w/2],
-                          [0, focal_length_y, camera_h/2],
+intrinsic_mat = np.array([[focal_length_x, 0, 320],
+                          [0, focal_length_y, 240],
                           [0, 0, 1]])
 old_gray = cv.cvtColor(old_frame, cv.COLOR_BGR2GRAY)
 # ShiTomasi corner detection
@@ -75,14 +75,21 @@ p0 = cv.goodFeaturesToTrack(old_gray, mask = None, **feature_params)
 prev_p = p0
 print(f'detech {len(p0)} kps')
 
+T_offset = np.array([[0.57735027],[-0.57735027],[0.57735027]])
+
 # Create a mask image for drawing purposes
 mask = np.zeros_like(old_frame)
+step = 0
 while(1):
     ret,frame = cap.read()
+    if not ret:
+        break
+    step += 1
     frame = cv.resize(frame, (640, 480)) 
     new_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
     # calculate optical flow
     p1, st, err = cv.calcOpticalFlowPyrLK(old_gray, new_gray, p0, None, **lk_params)
+    p1 = np.around(p1)
     # Select good points
     good_new = p1[st==1]
     good_prev = p0[st==1]
@@ -96,7 +103,9 @@ while(1):
     R, T = calCameraMotion(new_pts = good_new, prev_pts = good_prev, intrinsic_mat = intrinsic_mat)
     
     # update camera position
-    origin_camera_pos += T
+    origin_camera_pos += T - T_offset
+    origin_camera_pos = np.around(origin_camera_pos)
+    print(f'[{step}]pos:\n{T}')
     camera_pos.append(origin_camera_pos.copy())
     
     # draw the tracks
@@ -137,9 +146,9 @@ try:
 except:
     pass
 
-gif_save = str(input("want to save this GIF?:[y/n]"))
-if gif_save == 'y':
-    print('GIF is saving...')
-    ani.save('Camera_movement.gif', writer = 'pillow', fps = 1/0.04)
-else:
-    pass
+# gif_save = str(input("want to save this GIF?:[y/n]"))
+# if gif_save == 'y':
+#     print('GIF is saving...')
+#     ani.save('Camera_movement.gif', writer = 'pillow', fps = 1/0.04)
+# else:
+#     pass
