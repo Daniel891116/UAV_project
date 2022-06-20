@@ -23,8 +23,10 @@ def change_mode(master,mode):
     # master.mav.command_long_send(
     #    master.target_system, master.target_component,
     #    mavutil.mavlink.MAV_CMD_DO_SET_MODE, 0,
-    #    0, mode_id, 0, 0, 0, 0, 0) or:
-    # master.set_mode(mode_id) or:
+    #    0, mode_id, 0, 0, 0, 0, 0) 
+    #or:
+    # master.set_mode(mode_id) 
+    #or:
     master.mav.set_mode_send(
         master.target_system,
         mavutil.mavlink.MAV_MODE_FLAG_CUSTOM_MODE_ENABLED,
@@ -43,6 +45,10 @@ def change_mode(master,mode):
         # Print the ACK result !
         print(mavutil.mavlink.enums['MAV_RESULT'][ack_msg['result']].description)
         break
+
+def get_mode(master):
+    msg = master.recv_match(type = 'HEARTBEAT', blocking = True)
+    print(f'mode: {mavutil.mode_string_v10(msg)}')
 
 def arm(master):
     master.mav.command_long_send(

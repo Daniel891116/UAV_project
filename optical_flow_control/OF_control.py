@@ -120,7 +120,7 @@ ani = animation.FuncAnimation(
     func = camera_update, 
     fargs = (camera_Dots, camera_pos), 
     frames = camera_pos.shape[0], 
-    interval = 1000/camera_pos.shape[0] * 2, 
+    interval = 4000/camera_pos.shape[0] * 2, 
     blit = True
 )
 # plt.savefig("camera_movement.pdf")

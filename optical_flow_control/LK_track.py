@@ -1,12 +1,13 @@
 import numpy as np
+from numpy import linalg as LA
 import cv2 as cv
 import argparse
-import sys, os
+import sys, os, time
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
 sys.path.append(os.path.join(os.getcwd(), "../")) #append parent dir
-from utils import calCameraMotion, camera_update
+from utils import calCameraMotion, camera_update, check_halt
 
 parser = argparse.ArgumentParser()
 # parser.add_argument('--image', type=str, help='path to image file')
@@ -15,7 +16,7 @@ parser = argparse.ArgumentParser()
 # cap = cv.VideoCapture('./move.MOV')
 # cap.set(3,640)
 # cap.set(4,480)
-cap = cv.VideoCapture(1)
+cap = cv.VideoCapture(0)
 
 _maxFeature = 8
 focal_length_x = 506 # 111    # unit px
@@ -60,12 +61,15 @@ old_frame = cv.resize(old_frame, (640, 480))
 # set camera intrinsic matrix
 camera_h = old_frame.shape[0]
 camera_w = old_frame.shape[1]
-intrinsic_mat = np.array([[focal_length_x, 0, 320],
-                          [0, focal_length_y, 240],
+scaler = np.array([camera_w, camera_h])
+intrinsic_mat = np.array([[focal_length_x, 0, 0.5],
+                          [0, focal_length_y, 0.5],
                           [0, 0, 1]])
 old_gray = cv.cvtColor(old_frame, cv.COLOR_BGR2GRAY)
 # ShiTomasi corner detection
 p0 = cv.goodFeaturesToTrack(old_gray, mask = None, **feature_params)
+# format: [[[x1, y1], [x2, y2]...]]
+p0_norm = p0 / scaler
 # SIFT
 # sift = cv.SIFT_create(**SIFT_params)
 # sift_p0 = sift.detect(old_gray, None)
@@ -74,8 +78,6 @@ p0 = cv.goodFeaturesToTrack(old_gray, mask = None, **feature_params)
 # p0 = np.expand_dims(p0, axis = 1)
 prev_p = p0
 print(f'detech {len(p0)} kps')
-
-T_offset = np.array([[0.57735027],[-0.57735027],[0.57735027]])
 
 # Create a mask image for drawing purposes
 mask = np.zeros_like(old_frame)
@@ -89,23 +91,36 @@ while(1):
     new_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
     # calculate optical flow
     p1, st, err = cv.calcOpticalFlowPyrLK(old_gray, new_gray, p0, None, **lk_params)
-    p1 = np.around(p1)
+    # p1 = np.around(p1)
+    p1_norm = p1 / scaler
+
     # Select good points
     good_new = p1[st==1]
     good_prev = p0[st==1]
+    good_new_norm = p1_norm[st==1]
+    good_prev_norm = p0_norm[st==1]
     if (len(p0) - len(good_prev)):
         print(f'lost {len(p0) - len(good_prev)} kp')
         print(f'good_new: \n{good_new}')
         print(f'good_prev: \n{good_prev}')
         print(f'st" \n{st}')
         print(f'p0" \n{p0}')
+    if check_halt(good_new, good_prev, 0.2):
+        R = np.eye(3, 3)
+        T_camera = np.zeros((3, 1), dtype = np.float32)
+    else:
+        R, T, _mask = calCameraMotion(new_pts = good_new_norm, prev_pts = good_prev_norm, intrinsic_mat = intrinsic_mat)
+        T_camera = -np.dot(LA.inv(R), T)
+        print(T_camera)
+        T_camera = np.array(list(map(lambda t: t[0] if abs(t[0]) > 0.0 else 0.0, T_camera)), dtype = np.float32)
+        T_camera = np.expand_dims(T_camera, axis = -1)
 
-    R, T = calCameraMotion(new_pts = good_new, prev_pts = good_prev, intrinsic_mat = intrinsic_mat)
-    
     # update camera position
-    origin_camera_pos += T - T_offset
-    origin_camera_pos = np.around(origin_camera_pos)
-    print(f'[{step}]pos:\n{T}')
+    origin_camera_pos[0:2] += T_camera[0:2]
+    # origin_camera_pos = np.around(origin_camera_pos)
+    print(f'[{step}]pos:\n{T_camera}')
+    
+    #save all camera position
     camera_pos.append(origin_camera_pos.copy())
     
     # draw the tracks
@@ -128,6 +143,7 @@ while(1):
     old_gray = new_gray.copy()
     p0 = good_new.reshape(-1,1,2)
     prev_p = p0
+    time.sleep(0.1)
     
 camera_pos = np.array(camera_pos)
 camera_pos = np.squeeze(camera_pos, axis = -1)
