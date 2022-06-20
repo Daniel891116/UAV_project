@@ -8,7 +8,7 @@ import matplotlib.animation as animation
 sys.path.append(os.path.join(os.getcwd(), "../")) #append parent dir
 from utils import OPMotion, camera_update
 
-cap = cv.VideoCapture(1)
+cap = cv.VideoCapture(0)
 
 _maxFeature = 8
 
