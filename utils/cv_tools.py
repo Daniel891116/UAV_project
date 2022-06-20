@@ -34,5 +34,7 @@ def camera_init(camera_Dots, camera_pos: np.ndarray):
     
 def OPMotion(new_pts: np.ndarray, prev_pts: np.ndarray) -> np.ndarray:
     diff = new_pts - prev_pts
-    camera_move = np.mean(diff)
-    return camera_move
+    # print(diff)
+    camera_move = np.append(np.mean(diff, axis = 0), 0)
+    # print(camera_move[:, None])
+    return camera_move[:, None]
