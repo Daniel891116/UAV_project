@@ -1,5 +1,5 @@
 from pymavlink import mavutil
-from utils import change_mode, arm, disarm, takeoff, goto_wp, arrived_wp, set_speed
+from utils import change_mode, arm, disarm, takeoff, goto_wp, arrived_wp, set_speed, get_mode
 import time
 import cv2
 
@@ -19,19 +19,20 @@ master.mav.request_data_stream_send(master.target_system, master.target_componen
 
 boot_time = time.time()
 print(f'boot time is {boot_time}')
-# change_mode(master, "ALT_HOLD")
-change_mode(master, "GUIDED")
+change_mode(master, "ALT_HOLD")
+# change_mode(master, "STABILIZE")
 arm(master)
 msg = master.recv_match(type='COMMAND_ACK', blocking=True)
 print(msg)
-# change_mode(master, "STABILIZE")
+change_mode(master, "STABILIZE")
+change_mode(master, "GUIDED")
+
+get_mode(master)
 takeoff(master, 10)
 msg = master.recv_match(type='COMMAND_ACK', blocking=True)
 print(msg)
-# change_mode(master, "GUIDED")
 
 time.sleep(5)
-print(f'send time: {int(1e3 * (time.time() - boot_time))}')
 vx = 0.0
 vy = 0.0
 vz = 0.0
@@ -55,6 +56,8 @@ while True:
             vz += 0.1
       elif key & 0xFF == 84:
             vz -= 0.1
+      
+      print(f'send time: {int(1e3 * (time.time() - boot_time))}')
       set_speed(master, int(1e3 * int(time.time() - boot_time)), vx, vy, vz)
       print(f'Current Speed:\nvx: {vx}\nvy: {vy}\nvz: {vz}')
 

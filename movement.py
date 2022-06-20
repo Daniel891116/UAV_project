@@ -1,11 +1,12 @@
 from pymavlink import mavutil
-from utils import change_mode, arm, disarm, takeoff, goto_wp, arrived_wp
+from utils import change_mode, arm, disarm, takeoff, goto_wp, arrived_wp, cmd_set_home, get_mode
 import time
 
 wp_error = 50
 
 # Start a connection listening to a UDP port
 master = mavutil.mavlink_connection('/dev/ttyAMA0', baud = 57600)
+# master = mavutil.mavlink_connection('udpin:localhost:14551')
 
 # Wait for the first heartbeat
 #   This sets the system and component ID of remote system for the link
@@ -13,18 +14,19 @@ master.wait_heartbeat()
 print("Heartbeat from system (system %u component %u)" %
       (master.target_system, master.target_component))
 master.mav.request_data_stream_send(master.target_system, master.target_component, mavutil.mavlink.MAV_DATA_STREAM_ALL, 50, 1)
-master.mav.command_int_send(master.target_system, master.target_component, 0, mavutil.mavlink.MAV_CMD_DO_SET_HOME, 0, 0, 1, 0, 0, 0, 0, 0, 0)
-msg = master.recv_match(type='COMMAND_ACK', blocking=True)
-print(msg)
-
-
 boot_time = time.time()
 print(f'boot time is {boot_time}')
+
+# msg = master.recv_match("GOLBAL_POSITION_INT", blocking=True)
+# cmd_set_home(master, [msg.lat/10E7, msg.lon/10E7], 0)
+
 change_mode(master, "ALT_HOLD")
+get_mode(master)
 arm(master)
 msg = master.recv_match(type='COMMAND_ACK', blocking=True)
 print(msg)
 change_mode(master, "GUIDED")
+get_mode(master)
 takeoff(master, 1)
 msg = master.recv_match(type='COMMAND_ACK', blocking=True)
 print(msg)

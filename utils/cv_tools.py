@@ -1,4 +1,5 @@
 import numpy as np
+from numpy import linalg as LA
 import cv2 as cv
 
 def calCameraMotion(new_pts: np.ndarray, prev_pts: np.ndarray, intrinsic_mat: np.ndarray) -> (np.ndarray, np.ndarray):
@@ -8,9 +9,17 @@ def calCameraMotion(new_pts: np.ndarray, prev_pts: np.ndarray, intrinsic_mat: np
     # print(f'Essential matrix: \n{E}')
     # print(mask)
     pass_count, R, T, mask = cv.recoverPose(E, prev_pts, new_pts, intrinsic_mat, mask)
+    # print(mask)
     # print(f'Transformation: \n{R}')
     # print(f'Transpose: \n{T}')
-    return R, T
+    return R, T, mask
+
+def check_halt(new_pts: np.ndarray, prev_pts: np.ndarray, distThreshold: float) -> bool:
+    dist = np.mean(LA.norm(new_pts - prev_pts))**0.5
+    print(f"error: {dist}")
+    if dist > distThreshold:
+        return False
+    return True
 
 def camera_update(index: int, camera_Dots, camera_pos: np.ndarray):
     camera_Dots.set_data(camera_pos[:index, 0:2].T)
