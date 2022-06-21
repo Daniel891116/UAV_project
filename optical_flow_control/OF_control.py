@@ -72,10 +72,11 @@ mask = np.zeros_like(old_frame)
 step = 0
 start_time = time.time()
 while(1):
-    if time.time() - start_time >= 500:
+    if time.time() - start_time >= 1:
+        print(time.time(), start_time)
         p0 = cv.goodFeaturesToTrack(old_gray, mask = None, **feature_params)
         print('update kp')
-        
+
     ret,frame = cap.read()
     if not ret:
         break
