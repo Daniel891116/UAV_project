@@ -240,3 +240,40 @@ def arrived_wp(master, type: str, coordi: list, error: float = 1.0) -> bool:
 def set_speed(master, sys_time: int, vx: float, vy: float, vz: float):
     goto_wp(master, sys_time, type = 'local', mask = 'Use_Pos+Vel', position = [0, 0, 0, vx, vy, -vz, 0, 0, 0, 0, 0])
 
+def send_manual_command(master,controlsignal):
+    master.mav.manual_control_send(
+                master.target_system,
+                int(np.clip(controlsignal['pitch'],-1000,1000)),
+                int(np.clip(controlsignal['roll'],-1000,1000)),
+                int(np.clip(controlsignal['throttle'],0,1000)),
+                int(np.clip(controlsignal['yaw'],-1000,1000)),
+                0)
+
+class PID():
+    def __init__(self,setpoint = 0):
+        self.accumulate_error = 0
+        self.setpoint = setpoint
+        self.n = 100
+        self.data_record = [setpoint for _ in range(self.n)]
+        self.last_time = time.time()
+    def P(self,data,Kp):
+        return (data-self.setpoint)*Kp
+    def I(self,data,Ki):
+        self.accumulate_error += (data-self.setpoint)*Ki*(time.time()-self.last_time)
+        self.last_time = time.time()
+        return self.accumulate_error
+    def D(self,data,Kd):
+        d1 = (self.data_record[-1]-self.data_record[-(self.n//2)])
+        d2 = (self.data_record[-1]-self.data_record[0])/2
+        return (d1+d2)*Kd/2
+    def calculate_PID(self,data,Kp,Ki,Kd):
+        return self.P(data,Kp),self.I(data,Ki),self.D(data,Kd)
+    def correct(self,data,P,I,D):
+        self.data_record.pop(0)
+        self.data_record.append(data)
+        P,I,D = self.calculate_PID(data,P,I,D)
+        #print('P',P)
+        #D = min(max(D,-35),35)
+        #print('P',P,'D',D)
+        output = P+I+D
+        return output
