@@ -1,5 +1,5 @@
 from pymavlink import mavutil
-from utils import change_mode, arm, disarm, takeoff, goto_wp, arrived_wp, set_speed, get_mode
+from utils import change_mode, arm, disarm, takeoff, goto_wp, arrived_wp, set_speed, get_mode, send_manual_command
 import time
 import cv2
 
@@ -24,15 +24,19 @@ change_mode(master, "ALT_HOLD")
 arm(master)
 msg = master.recv_match(type='COMMAND_ACK', blocking=True)
 print(msg)
-change_mode(master, "STABILIZE")
+# change_mode(master, "STABILIZE")
 change_mode(master, "GUIDED")
 
 get_mode(master)
 takeoff(master, 10)
+time.sleep(5)
+change_mode(master, "ALT_HOLD")
+get_mode(master)
 
 vx = 0.0
 vy = 0.0
 vz = 0.0
+control_signal = {'roll':0,'pitch':0,'throttle':500,'yaw':0}
 
 cap = cv2.VideoCapture(0)
 
@@ -43,25 +47,32 @@ while True:
       if key & 0xFF == 27: # ESC
             break
       elif key & 0xFF == ord('w'):
-            vx += 0.1
+            vx += 10
       elif key & 0xFF == ord('s'):
-            vx -= 0.1
+            vx -= 10
       elif key & 0xFF == ord('a'):
-            vy += 0.1
+            vy += 10
       elif key & 0xFF == ord('d'):
-            vy -= 0.1
+            vy -= 10
       elif key & 0xFF == 82:
-            vz += 0.1
+            vz += 10
       elif key & 0xFF == 84:
-            vz -= 0.1
+            vz -= 10
       
       print(f'send time: {int(1e3 * (time.time() - boot_time))}')
-      set_speed(master, int(1e3 * int(time.time() - boot_time)), vx, vy, vz)
-      print(f'Current Speed:\nvx: {vx}\nvy: {vy}\nvz: {vz}')
+      control_signal['pitch'] = vy
+      control_signal['roll'] = vx
+      control_signal['yaw'] = vz
+      print(f'control_signal:\n {control_signal}')
+      send_manual_command(master, control_signal)
 
 cap.release()
 cv2.destroyAllWindows()
 
 change_mode(master, "LAND")
+control_signal = {'roll':0,'pitch':0,'throttle':0,'yaw':0}
+send_manual_command(master, control_signal)
 disarm(master)
+msg = master.recv_match(type='COMMAND_ACK', blocking=True)
+print(msg)
 print("disarm")

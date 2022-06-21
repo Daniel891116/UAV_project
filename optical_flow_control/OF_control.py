@@ -75,12 +75,11 @@ try:
     get_mode(master)
     print('takeoff...')
     takeoff(master, 1)
-    change_mode(master, "ALT_HOLD")
     get_mode(master)
-    control_signal = {'roll':0,'pitch':0,'throttle':500,'yaw':0}
+    control_signal = {'roll':0,'pitch':0,'throttle':580,'yaw':0}
     send_manual_command(master, control_signal)
     time.sleep(10)
-    # change_mode(master, "ALT_HOLD")
+    change_mode(master, "ALT_HOLD")
     get_mode(master)
 
     xPID = PID()
@@ -132,24 +131,31 @@ try:
             break
         # p1 = np.around(p1)
         # Select good points
-        good_new = p1[st==1]
-        good_prev = p0[st==1]
+        try:
+            good_new = p1[st==1]
+            good_prev = p0[st==1]
+        except:
+            disarm(master)
+            msg = master.recv_match(type='COMMAND_ACK', blocking=True)
+            print(msg)
+            print("disarm")
 
         T = OPMotion(new_pts = good_new, prev_pts = good_prev)
         # PID control
         try:
             if not PID_disable:
-                xc = xPID.correct(-T[0][0],P=0.2,I=0, D=0)#1e-5,D=2e-1)
-                yc = yPID.correct( T[1][0],P=0.2,I=0, D=0)#1e-5,D=2e-1)
-                print(f'Input:\n x: {T[0][0]}, y:{T[1][0]}')
-                control_signal['pitch'] = xc
-                control_signal['roll'] = -yc
-                print(f'control_sognal:\n {control_signal}')
+                # update camera position
+                origin_camera_pos += T
+                xc = xPID.correct(-origin_camera_pos[0][0],P=0.5,I=1e-3, D=0)#1e-5,D=2e-1)
+                yc = yPID.correct( origin_camera_pos[1][0],P=0.5,I=1e-3, D=0)#1e-5,D=2e-1)
+                print(f'Input:\n x: {-origin_camera_pos[0][0]}, y:{origin_camera_pos[1][0]}')
+                control_signal['pitch'] = -yc
+                control_signal['roll'] = -xc
+                print(f'control_signal:\n {control_signal}')
                 send_manual_command(master, control_signal)
         except:
             break
-        # update camera position
-        origin_camera_pos += T
+        
         # origin_camera_pos = np.around(origin_camera_pos)
         # print(f'[{step}]pos:\n{T}')
         camera_pos.append(origin_camera_pos.copy())
@@ -173,6 +179,16 @@ try:
         old_gray = new_gray.copy()
         p0 = good_new.reshape(-1,1,2)
         
+    cap.release()
+    cv.destroyAllWindows()
+    change_mode(master, "LAND")
+    control_signal = {'roll':0,'pitch':0,'throttle':0,'yaw':0}
+    send_manual_command(master, control_signal)
+    disarm(master)
+    msg = master.recv_match(type='COMMAND_ACK', blocking=True)
+    print(msg)
+    print("disarm")
+
     camera_pos = np.array(camera_pos)
     camera_pos = np.squeeze(camera_pos, axis = -1)
     camera_Dots = ax.plot(camera_pos[:, 0], camera_pos[:, 1], camera_pos[:, 2], marker = 'o', markersize = 6)[0]
@@ -189,15 +205,6 @@ try:
         plt.show()
     except:
         pass
-    cap.release()
-    cv.destroyAllWindows()
-    change_mode(master, "LAND")
-    control_signal = {'roll':0,'pitch':0,'throttle':0,'yaw':0}
-    send_manual_command(master, control_signal)
-    disarm(master)
-    msg = master.recv_match(type='COMMAND_ACK', blocking=True)
-    print(msg)
-    print("disarm")
     # gif_save = str(input("want to save this GIF?:[y/n]"))
     # if gif_save == 'y':
     #     print('GIF is saving...')
