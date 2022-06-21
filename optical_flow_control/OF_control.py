@@ -127,13 +127,14 @@ while True:
     good_prev = p0[st==1]
 
     T = OPMotion(new_pts = good_new, prev_pts = good_prev)
-    # update camera position
+    # PID control
     xc = xPID.correct(-T[0][0],P=0.2,I=1e-5,D=2e-1)
     yc = yPID.correct( T[1][0],P=0.2,I=1e-5,D=2e-1)
     control_signal['pitch'] = xc + 20
     control_signal['roll'] = -yc
     print(f'control_sognal:\n {control_signal}')
     send_manual_command(master, control_signal)
+    # update camera position
     origin_camera_pos += T
     # origin_camera_pos = np.around(origin_camera_pos)
     # print(f'[{step}]pos:\n{T}')
