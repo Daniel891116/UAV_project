@@ -51,146 +51,162 @@ control_signal = {'roll':0,'pitch':0,'throttle':500,'yaw':0}
 PID_disable = True
 # ========================================================================
 # Start a connection listening to a UART port
-master = mavutil.mavlink_connection('/dev/ttyAMA0', baud = 57600)
-
-# Wait for the first heartbeat
-#   This sets the system and component ID of remote system for the link
-master.wait_heartbeat()
-print("Heartbeat from system (system %u component %u)" %
-      (master.target_system, master.target_component))
-master.mav.request_data_stream_send(master.target_system, master.target_component, mavutil.mavlink.MAV_DATA_STREAM_ALL, 50, 1)
-# master.mav.command_int_send(master.target_system, master.target_component, 0, mavutil.mavlink.MAV_CMD_DO_SET_HOME, 0, 0, 1, 0, 0, 0, 0, 0, 0)
-# msg = master.recv_match(type='COMMAND_ACK', blocking=False)
-# print(msg)
-
-
-boot_time = time.time()
-print(f'boot time is {boot_time}')
-change_mode(master, "ALT_HOLD")
-arm(master)
-msg = master.recv_match(type='COMMAND_ACK', blocking=True)
-print(msg)
-change_mode(master, "GUIDED")
-
-get_mode(master)
-print('takoff...')
-takeoff(master, 1)
-time.sleep(10)
-change_mode(master, "ALT_HOLD")
-get_mode(master)
-
-xPID = PID()
-yPID = PID()
-
-# Take first frame and find corners in it
-ret, old_frame = cap.read()
-old_frame = cv.rotate(old_frame, cv.ROTATE_180)
-old_frame = cv.resize(old_frame, (640, 480)) 
-
-# set camera intrinsic matrix
-camera_h = old_frame.shape[0]
-camera_w = old_frame.shape[1]
-
-old_gray = cv.cvtColor(old_frame, cv.COLOR_BGR2GRAY)
-# ShiTomasi corner detection
-p0 = cv.goodFeaturesToTrack(old_gray, mask = None, **feature_params)
-# SIFT
-# sift = cv.SIFT_create(**SIFT_params)
-# sift_p0 = sift.detect(old_gray, None)
-
-# p0 = np.array(list(map(lambda keypoint: list(keypoint.pt), sift_p0)), dtype = np.float32)
-# p0 = np.expand_dims(p0, axis = 1)
-
-print(f'detech {len(p0)} kps')
-
-# Create a mask image for drawing purposes
-mask = np.zeros_like(old_frame)
-step = 0
-start_time = time.time()
-while True:
-    if time.time() - start_time >= 1:
-        # print(time.time(), start_time)
-        p0 = cv.goodFeaturesToTrack(old_gray, mask = None, **feature_params)
-        print('update kp')
-        start_time = time.time()
-
-    ret,frame = cap.read()
-    if not ret:
-        break
-    step += 1
-    frame = cv.rotate(frame, cv.ROTATE_180)
-    frame = cv.resize(frame, (640, 480)) 
-    new_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
-    # calculate optical flow
-    p1, st, err = cv.calcOpticalFlowPyrLK(old_gray, new_gray, p0, None, **lk_params)
-    # p1 = np.around(p1)
-    # Select good points
-    good_new = p1[st==1]
-    good_prev = p0[st==1]
-
-    T = OPMotion(new_pts = good_new, prev_pts = good_prev)
-    # PID control
-    try:
-        if not PID_disable:
-            xc = xPID.correct(-T[0][0],P=0.2,I=1e-5,D=2e-1)
-            yc = yPID.correct( T[1][0],P=0.2,I=1e-5,D=2e-1)
-            control_signal['pitch'] = xc
-            control_signal['roll'] = -yc
-            print(f'control_sognal:\n {control_signal}')
-            send_manual_command(master, control_signal)
-    except:
-        break
-    # update camera position
-    origin_camera_pos += T
-    # origin_camera_pos = np.around(origin_camera_pos)
-    # print(f'[{step}]pos:\n{T}')
-    camera_pos.append(origin_camera_pos.copy())
-    
-    # draw the tracks
-    for i,(new,old) in enumerate(zip(good_new, good_prev)):
-        a,b = new.ravel()
-        c,d = old.ravel()
-        # mask = cv.line(mask, (int(a),int(b)),(int(c),int(d)), color[i].tolist(), 2)
-        draw_frame = cv.circle(frame,(int(a),int(b)),5,color[i].tolist(),-1)
-    # img = cv.add(draw_frame,mask)
-    # cv.imshow('frame',img)
-    cv.imshow('camera', draw_frame)
-
-    k = cv.waitKey(30) & 0xff
-    if k == 27:
-        break
-    if k == ord('s'):
-        PID_disable = False
-    # Now update the previous frame and previous points
-    old_gray = new_gray.copy()
-    p0 = good_new.reshape(-1,1,2)
-    
-camera_pos = np.array(camera_pos)
-camera_pos = np.squeeze(camera_pos, axis = -1)
-camera_Dots = ax.plot(camera_pos[:, 0], camera_pos[:, 1], camera_pos[:, 2], marker = 'o', markersize = 6)[0]
-ani = animation.FuncAnimation(
-    fig = fig, 
-    func = camera_update, 
-    fargs = (camera_Dots, camera_pos), 
-    frames = camera_pos.shape[0], 
-    interval = 4000/camera_pos.shape[0] * 2, 
-    blit = True
-)
-# plt.savefig("camera_movement.pdf")
 try:
-    plt.show()
-except:
-    pass
-cap.release()
-cv.destroyAllWindows()
-change_mode(master, "LAND")
-disarm(master)
-msg = master.recv_match(type='COMMAND_ACK', blocking=True)
-print(msg)
-print("disarm")
-# gif_save = str(input("want to save this GIF?:[y/n]"))
-# if gif_save == 'y':
-#     print('GIF is saving...')
-#     ani.save('Camera_movement.gif', writer = 'pillow', fps = 1/0.04)
-# else:
-#     pass
+    master = mavutil.mavlink_connection('/dev/ttyAMA0', baud = 57600)
+
+    # Wait for the first heartbeat
+    #   This sets the system and component ID of remote system for the link
+    master.wait_heartbeat()
+    print("Heartbeat from system (system %u component %u)" %
+        (master.target_system, master.target_component))
+    master.mav.request_data_stream_send(master.target_system, master.target_component, mavutil.mavlink.MAV_DATA_STREAM_ALL, 50, 1)
+    # master.mav.command_int_send(master.target_system, master.target_component, 0, mavutil.mavlink.MAV_CMD_DO_SET_HOME, 0, 0, 1, 0, 0, 0, 0, 0, 0)
+    # msg = master.recv_match(type='COMMAND_ACK', blocking=False)
+    # print(msg)
+
+
+    boot_time = time.time()
+    print(f'boot time is {boot_time}')
+    change_mode(master, "ALT_HOLD")
+    arm(master)
+    msg = master.recv_match(type='COMMAND_ACK', blocking=True)
+    print(msg)
+    change_mode(master, "GUIDED")
+    get_mode(master)
+    print('takeoff...')
+    takeoff(master, 1)
+    change_mode(master, "ALT_HOLD")
+    get_mode(master)
+    control_signal = {'roll':0,'pitch':0,'throttle':500,'yaw':0}
+    send_manual_command(master, control_signal)
+    time.sleep(10)
+    # change_mode(master, "ALT_HOLD")
+    get_mode(master)
+
+    xPID = PID()
+    yPID = PID()
+
+    # Take first frame and find corners in it
+    ret, old_frame = cap.read()
+    old_frame = cv.rotate(old_frame, cv.ROTATE_180)
+    old_frame = cv.resize(old_frame, (640, 480)) 
+
+    # set camera intrinsic matrix
+    camera_h = old_frame.shape[0]
+    camera_w = old_frame.shape[1]
+
+    old_gray = cv.cvtColor(old_frame, cv.COLOR_BGR2GRAY)
+    # ShiTomasi corner detection
+    p0 = cv.goodFeaturesToTrack(old_gray, mask = None, **feature_params)
+    # SIFT
+    # sift = cv.SIFT_create(**SIFT_params)
+    # sift_p0 = sift.detect(old_gray, None)
+
+    # p0 = np.array(list(map(lambda keypoint: list(keypoint.pt), sift_p0)), dtype = np.float32)
+    # p0 = np.expand_dims(p0, axis = 1)
+
+    print(f'detech {len(p0)} kps')
+
+    # Create a mask image for drawing purposes
+    mask = np.zeros_like(old_frame)
+    step = 0
+    start_time = time.time()
+    while True:
+        if time.time() - start_time >= 1:
+            # print(time.time(), start_time)
+            p0 = cv.goodFeaturesToTrack(old_gray, mask = None, **feature_params)
+            print('update kp')
+            start_time = time.time()
+
+        ret,frame = cap.read()
+        if not ret:
+            break
+        step += 1
+        frame = cv.rotate(frame, cv.ROTATE_180)
+        frame = cv.resize(frame, (640, 480)) 
+        new_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
+        # calculate optical flow
+        try:
+            p1, st, err = cv.calcOpticalFlowPyrLK(old_gray, new_gray, p0, None, **lk_params)
+        except:
+            break
+        # p1 = np.around(p1)
+        # Select good points
+        good_new = p1[st==1]
+        good_prev = p0[st==1]
+
+        T = OPMotion(new_pts = good_new, prev_pts = good_prev)
+        # PID control
+        try:
+            if not PID_disable:
+                xc = xPID.correct(-T[0][0],P=0.2,I=0, D=0)#1e-5,D=2e-1)
+                yc = yPID.correct( T[1][0],P=0.2,I=0, D=0)#1e-5,D=2e-1)
+                print(f'Input:\n x: {T[0][0]}, y:{T[1][0]}')
+                control_signal['pitch'] = xc
+                control_signal['roll'] = -yc
+                print(f'control_sognal:\n {control_signal}')
+                send_manual_command(master, control_signal)
+        except:
+            break
+        # update camera position
+        origin_camera_pos += T
+        # origin_camera_pos = np.around(origin_camera_pos)
+        # print(f'[{step}]pos:\n{T}')
+        camera_pos.append(origin_camera_pos.copy())
+        
+        # draw the tracks
+        for i,(new,old) in enumerate(zip(good_new, good_prev)):
+            a,b = new.ravel()
+            c,d = old.ravel()
+            # mask = cv.line(mask, (int(a),int(b)),(int(c),int(d)), color[i].tolist(), 2)
+            draw_frame = cv.circle(frame,(int(a),int(b)),5,color[i].tolist(),-1)
+        # img = cv.add(draw_frame,mask)
+        # cv.imshow('frame',img)
+        cv.imshow('camera', draw_frame)
+
+        k = cv.waitKey(30) & 0xff
+        if k == 27:
+            break
+        if k == ord('s'):
+            PID_disable = False
+        # Now update the previous frame and previous points
+        old_gray = new_gray.copy()
+        p0 = good_new.reshape(-1,1,2)
+        
+    camera_pos = np.array(camera_pos)
+    camera_pos = np.squeeze(camera_pos, axis = -1)
+    camera_Dots = ax.plot(camera_pos[:, 0], camera_pos[:, 1], camera_pos[:, 2], marker = 'o', markersize = 6)[0]
+    ani = animation.FuncAnimation(
+        fig = fig, 
+        func = camera_update, 
+        fargs = (camera_Dots, camera_pos), 
+        frames = camera_pos.shape[0], 
+        interval = 4000/camera_pos.shape[0] * 2, 
+        blit = True
+    )
+    # plt.savefig("camera_movement.pdf")
+    try:
+        plt.show()
+    except:
+        pass
+    cap.release()
+    cv.destroyAllWindows()
+    change_mode(master, "LAND")
+    control_signal = {'roll':0,'pitch':0,'throttle':0,'yaw':0}
+    send_manual_command(master, control_signal)
+    disarm(master)
+    msg = master.recv_match(type='COMMAND_ACK', blocking=True)
+    print(msg)
+    print("disarm")
+    # gif_save = str(input("want to save this GIF?:[y/n]"))
+    # if gif_save == 'y':
+    #     print('GIF is saving...')
+    #     ani.save('Camera_movement.gif', writer = 'pillow', fps = 1/0.04)
+    # else:
+    #     pass
+except KeyboardInterrupt:
+    control_signal = {'roll':0,'pitch':0,'throttle':0,'yaw':0}
+    disarm(master)
+    msg = master.recv_match(type='COMMAND_ACK', blocking=True)
+    print(msg)
+    print("disarm")
