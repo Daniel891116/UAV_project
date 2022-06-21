@@ -73,9 +73,10 @@ step = 0
 start_time = time.time()
 while(1):
     if time.time() - start_time >= 1:
-        print(time.time(), start_time)
+        # print(time.time(), start_time)
         p0 = cv.goodFeaturesToTrack(old_gray, mask = None, **feature_params)
         print('update kp')
+        start_time = time.time()
 
     ret,frame = cap.read()
     if not ret:
@@ -99,9 +100,6 @@ while(1):
     camera_pos.append(origin_camera_pos.copy())
     
     # draw the tracks
-    # print(f'detect {len(good_new)} points')
-    # if (len(good_new) < len(prev_p)):
-    #     print(f'loss {len(prev_p) - len(good_new)} keypoint(s)')
     for i,(new,old) in enumerate(zip(good_new, good_prev)):
         a,b = new.ravel()
         c,d = old.ravel()
@@ -117,7 +115,6 @@ while(1):
     # Now update the previous frame and previous points
     old_gray = new_gray.copy()
     p0 = good_new.reshape(-1,1,2)
-    prev_p = p0
     
 camera_pos = np.array(camera_pos)
 camera_pos = np.squeeze(camera_pos, axis = -1)
