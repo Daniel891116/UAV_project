@@ -45,8 +45,10 @@ ax.set_zlabel('z')
 ax.set_title('Trajectory of camera')
 
 origin_camera_pos = np.array([[0], [0], [0]], dtype = np.float64)
+
 camera_pos = []
 control_signal = {'roll':0,'pitch':0,'throttle':500,'yaw':0}
+PID_disable = True
 # ========================================================================
 # Start a connection listening to a UART port
 master = mavutil.mavlink_connection('/dev/ttyAMA0', baud = 57600)
@@ -72,8 +74,8 @@ change_mode(master, "GUIDED")
 
 get_mode(master)
 print('takoff...')
-takeoff(master, 10)
-time.sleep(1)
+takeoff(master, 1)
+time.sleep(10)
 change_mode(master, "ALT_HOLD")
 get_mode(master)
 
@@ -121,19 +123,23 @@ while True:
     new_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
     # calculate optical flow
     p1, st, err = cv.calcOpticalFlowPyrLK(old_gray, new_gray, p0, None, **lk_params)
-    p1 = np.around(p1)
+    # p1 = np.around(p1)
     # Select good points
     good_new = p1[st==1]
     good_prev = p0[st==1]
 
     T = OPMotion(new_pts = good_new, prev_pts = good_prev)
     # PID control
-    xc = xPID.correct(-T[0][0],P=0.2,I=1e-5,D=2e-1)
-    yc = yPID.correct( T[1][0],P=0.2,I=1e-5,D=2e-1)
-    control_signal['pitch'] = xc + 20
-    control_signal['roll'] = -yc
-    print(f'control_sognal:\n {control_signal}')
-    send_manual_command(master, control_signal)
+    try:
+        if not PID_disable:
+            xc = xPID.correct(-T[0][0],P=0.2,I=1e-5,D=2e-1)
+            yc = yPID.correct( T[1][0],P=0.2,I=1e-5,D=2e-1)
+            control_signal['pitch'] = xc
+            control_signal['roll'] = -yc
+            print(f'control_sognal:\n {control_signal}')
+            send_manual_command(master, control_signal)
+    except:
+        break
     # update camera position
     origin_camera_pos += T
     # origin_camera_pos = np.around(origin_camera_pos)
@@ -153,6 +159,8 @@ while True:
     k = cv.waitKey(30) & 0xff
     if k == 27:
         break
+    if k == ord('s'):
+        PID_disable = False
     # Now update the previous frame and previous points
     old_gray = new_gray.copy()
     p0 = good_new.reshape(-1,1,2)
@@ -177,6 +185,8 @@ cap.release()
 cv.destroyAllWindows()
 change_mode(master, "LAND")
 disarm(master)
+msg = master.recv_match(type='COMMAND_ACK', blocking=True)
+print(msg)
 print("disarm")
 # gif_save = str(input("want to save this GIF?:[y/n]"))
 # if gif_save == 'y':
