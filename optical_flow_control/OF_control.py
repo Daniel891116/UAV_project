@@ -2,6 +2,7 @@ import numpy as np
 import cv2 as cv
 import argparse
 import sys, os
+import time
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
@@ -69,7 +70,12 @@ T_offset = np.array([[0.57735027],[-0.57735027],[0.57735027]])
 # Create a mask image for drawing purposes
 mask = np.zeros_like(old_frame)
 step = 0
+start_time = time.time()
 while(1):
+    if time.time() - start_time >= 500:
+        p0 = cv.goodFeaturesToTrack(old_gray, mask = None, **feature_params)
+        print('update kp')
+        
     ret,frame = cap.read()
     if not ret:
         break
@@ -88,7 +94,7 @@ while(1):
     # update camera position
     origin_camera_pos += T
     origin_camera_pos = np.around(origin_camera_pos)
-    print(f'[{step}]pos:\n{T}')
+    # print(f'[{step}]pos:\n{T}')
     camera_pos.append(origin_camera_pos.copy())
     
     # draw the tracks
