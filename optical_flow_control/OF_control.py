@@ -103,10 +103,11 @@ while(1):
     for i,(new,old) in enumerate(zip(good_new, good_prev)):
         a,b = new.ravel()
         c,d = old.ravel()
-        mask = cv.line(mask, (int(a),int(b)),(int(c),int(d)), color[i].tolist(), 2)
+        # mask = cv.line(mask, (int(a),int(b)),(int(c),int(d)), color[i].tolist(), 2)
         draw_frame = cv.circle(frame,(int(a),int(b)),5,color[i].tolist(),-1)
-    img = cv.add(draw_frame,mask)
-    cv.imshow('frame',img)
+    # img = cv.add(draw_frame,mask)
+    # cv.imshow('frame',img)
+    cv.imshow('camera', draw_frame)
 
     k = cv.waitKey(30) & 0xff
     if k == 27:
