@@ -105,7 +105,7 @@ print(f'detech {len(p0)} kps')
 mask = np.zeros_like(old_frame)
 step = 0
 start_time = time.time()
-while(1):
+while True:
     if time.time() - start_time >= 1:
         # print(time.time(), start_time)
         p0 = cv.goodFeaturesToTrack(old_gray, mask = None, **feature_params)
@@ -130,7 +130,10 @@ while(1):
     # update camera position
     xc = xPID.correct(-T[0][0],P=0.2,I=1e-5,D=2e-1)
     yc = yPID.correct( T[1][0],P=0.2,I=1e-5,D=2e-1)
-    print(f'PID correct:\n {xc}, {yc}')
+    control_signal['pitch'] = xc + 20
+    control_signal['roll'] = -yc
+    print(f'control_sognal:\n {control_signal}')
+    send_manual_command(master, control_signal)
     origin_camera_pos += T
     # origin_camera_pos = np.around(origin_camera_pos)
     # print(f'[{step}]pos:\n{T}')
@@ -148,7 +151,6 @@ while(1):
 
     k = cv.waitKey(30) & 0xff
     if k == 27:
-        cv.destroyAllWindows()
         break
     # Now update the previous frame and previous points
     old_gray = new_gray.copy()
@@ -170,7 +172,11 @@ try:
     plt.show()
 except:
     pass
-
+cap.release()
+cv.destroyAllWindows()
+change_mode(master, "LAND")
+disarm(master)
+print("disarm")
 # gif_save = str(input("want to save this GIF?:[y/n]"))
 # if gif_save == 'y':
 #     print('GIF is saving...')
