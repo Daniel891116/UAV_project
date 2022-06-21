@@ -67,20 +67,20 @@ try:
 
     boot_time = time.time()
     print(f'boot time is {boot_time}')
-    change_mode(master, "ALT_HOLD")
-    arm(master)
-    msg = master.recv_match(type='COMMAND_ACK', blocking=True)
-    print(msg)
-    change_mode(master, "GUIDED")
-    get_mode(master)
-    print('takeoff...')
-    takeoff(master, 1)
-    get_mode(master)
-    control_signal = {'roll':0,'pitch':0,'throttle':580,'yaw':0}
-    send_manual_command(master, control_signal)
-    time.sleep(10)
-    change_mode(master, "ALT_HOLD")
-    get_mode(master)
+    # change_mode(master, "ALT_HOLD")
+    # arm(master)
+    # msg = master.recv_match(type='COMMAND_ACK', blocking=True)
+    # print(msg)
+    # change_mode(master, "GUIDED")
+    # get_mode(master)
+    # print('takeoff...')
+    # takeoff(master, 1)
+    # get_mode(master)
+    # control_signal = {'roll':0,'pitch':0,'throttle':580,'yaw':0}
+    # send_manual_command(master, control_signal)
+    # time.sleep(10)
+    # change_mode(master, "ALT_HOLD")
+    # get_mode(master)
 
     xPID = PID()
     yPID = PID()
@@ -114,7 +114,7 @@ try:
         if time.time() - start_time >= 1:
             # print(time.time(), start_time)
             p0 = cv.goodFeaturesToTrack(old_gray, mask = None, **feature_params)
-            print('update kp')
+            # print('update kp')
             start_time = time.time()
 
         ret,frame = cap.read()
@@ -127,6 +127,7 @@ try:
         # calculate optical flow
         try:
             p1, st, err = cv.calcOpticalFlowPyrLK(old_gray, new_gray, p0, None, **lk_params)
+            p1 = np.around(p1)
         except:
             break
         # p1 = np.around(p1)
@@ -141,6 +142,7 @@ try:
             print("disarm")
 
         T = OPMotion(new_pts = good_new, prev_pts = good_prev)
+        origin_camera_pos += T
         # PID control
         try:
             if not PID_disable:
