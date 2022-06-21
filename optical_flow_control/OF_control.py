@@ -1,3 +1,4 @@
+from pymavlink import mavutil
 import numpy as np
 import cv2 as cv
 import argparse
@@ -8,6 +9,7 @@ import matplotlib.animation as animation
 
 sys.path.append(os.path.join(os.getcwd(), "../")) #append parent dir
 from utils import OPMotion, camera_update
+from utils import change_mode, arm, disarm, takeoff, get_mode, send_manual_command, PID
 
 cap = cv.VideoCapture(0)
 
@@ -44,9 +46,43 @@ ax.set_title('Trajectory of camera')
 
 origin_camera_pos = np.array([[0], [0], [0]], dtype = np.float64)
 camera_pos = []
+control_signal = {'roll':0,'pitch':0,'throttle':500,'yaw':0}
+# ========================================================================
+# Start a connection listening to a UART port
+master = mavutil.mavlink_connection('/dev/ttyAMA0', baud = 57600)
+
+# Wait for the first heartbeat
+#   This sets the system and component ID of remote system for the link
+master.wait_heartbeat()
+print("Heartbeat from system (system %u component %u)" %
+      (master.target_system, master.target_component))
+master.mav.request_data_stream_send(master.target_system, master.target_component, mavutil.mavlink.MAV_DATA_STREAM_ALL, 50, 1)
+# master.mav.command_int_send(master.target_system, master.target_component, 0, mavutil.mavlink.MAV_CMD_DO_SET_HOME, 0, 0, 1, 0, 0, 0, 0, 0, 0)
+# msg = master.recv_match(type='COMMAND_ACK', blocking=False)
+# print(msg)
+
+
+boot_time = time.time()
+print(f'boot time is {boot_time}')
+change_mode(master, "ALT_HOLD")
+arm(master)
+msg = master.recv_match(type='COMMAND_ACK', blocking=True)
+print(msg)
+change_mode(master, "GUIDED")
+
+get_mode(master)
+print('takoff...')
+takeoff(master, 10)
+time.sleep(1)
+change_mode(master, "ALT_HOLD")
+get_mode(master)
+
+xPID = PID()
+yPID = PID()
 
 # Take first frame and find corners in it
 ret, old_frame = cap.read()
+old_frame = cv.rotate(old_frame, cv.ROTATE_180)
 old_frame = cv.resize(old_frame, (640, 480)) 
 
 # set camera intrinsic matrix
@@ -62,10 +98,8 @@ p0 = cv.goodFeaturesToTrack(old_gray, mask = None, **feature_params)
 
 # p0 = np.array(list(map(lambda keypoint: list(keypoint.pt), sift_p0)), dtype = np.float32)
 # p0 = np.expand_dims(p0, axis = 1)
-prev_p = p0
-print(f'detech {len(p0)} kps')
 
-T_offset = np.array([[0.57735027],[-0.57735027],[0.57735027]])
+print(f'detech {len(p0)} kps')
 
 # Create a mask image for drawing purposes
 mask = np.zeros_like(old_frame)
@@ -82,6 +116,7 @@ while(1):
     if not ret:
         break
     step += 1
+    frame = cv.rotate(frame, cv.ROTATE_180)
     frame = cv.resize(frame, (640, 480)) 
     new_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
     # calculate optical flow
@@ -92,10 +127,12 @@ while(1):
     good_prev = p0[st==1]
 
     T = OPMotion(new_pts = good_new, prev_pts = good_prev)
-    
     # update camera position
+    xc = xPID.correct(-T[0][0],P=0.2,I=1e-5,D=2e-1)
+    yc = yPID.correct( T[1][0],P=0.2,I=1e-5,D=2e-1)
+    print(f'PID correct:\n {xc}, {yc}')
     origin_camera_pos += T
-    origin_camera_pos = np.around(origin_camera_pos)
+    # origin_camera_pos = np.around(origin_camera_pos)
     # print(f'[{step}]pos:\n{T}')
     camera_pos.append(origin_camera_pos.copy())
     
