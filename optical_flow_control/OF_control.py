@@ -10,7 +10,7 @@ from utils import OPMotion, camera_update
 
 cap = cv.VideoCapture(0)
 
-_maxFeature = 8
+_maxFeature = 16
 
 # params for SIFT detection
 SIFT_params = dict( nfeatures = _maxFeature,

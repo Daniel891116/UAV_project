@@ -29,13 +29,11 @@ change_mode(master, "GUIDED")
 
 get_mode(master)
 takeoff(master, 10)
-msg = master.recv_match(type='COMMAND_ACK', blocking=True)
-print(msg)
 
-time.sleep(5)
 vx = 0.0
 vy = 0.0
 vz = 0.0
+
 cap = cv2.VideoCapture(0)
 
 while True:
