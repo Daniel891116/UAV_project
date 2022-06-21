@@ -104,8 +104,8 @@ while(1):
         a,b = new.ravel()
         c,d = old.ravel()
         mask = cv.line(mask, (int(a),int(b)),(int(c),int(d)), color[i].tolist(), 2)
-        frame = cv.circle(frame,(int(a),int(b)),5,color[i].tolist(),-1)
-    img = cv.add(frame,mask)
+        draw_frame = cv.circle(frame,(int(a),int(b)),5,color[i].tolist(),-1)
+    img = cv.add(draw_frame,mask)
     cv.imshow('frame',img)
 
     k = cv.waitKey(30) & 0xff
