@@ -34,7 +34,41 @@ def camera_init(camera_Dots, camera_pos: np.ndarray):
     
 def OPMotion(new_pts: np.ndarray, prev_pts: np.ndarray) -> np.ndarray:
     diff = new_pts - prev_pts
-    # print(diff)
-    camera_move = np.append(np.mean(diff, axis = 0), 0)
-    # print(camera_move[:, None])
+    scales = LA.norm(diff, axis = -1)
+    scale_mask = detectOutlier(inputs = scales, threshold = 1.0)
+    angles = calAngle(diff = diff)
+    angle_mask = detectOutlier(inputs = angles, threshold = 1.0)
+    mask = scale_mask * angle_mask
+    diff_inlier = diff[mask == 1]
+    if len(diff_inlier) != 0:
+        camera_move = np.append(np.mean(diff_inlier, axis = 0), 0)
+    else:
+        camera_move = np.array([0, 0, 0])
     return camera_move[:, None]
+
+def calAngle(diff: np.ndarray) -> np.ndarray:
+    angles = np.zeros((diff.shape[0]))
+    for i in range(diff.shape[0]):
+        if diff[i][0] == 0:
+            if diff[i][1] >= 0:
+                angles[i] = 90.0
+            else :
+                angles[i] = -90.0
+        elif diff[i][0] < 0:
+            tan = diff[i][1] / diff[i][0]
+            angles[i] = np.arctan(tan) * 180 / np.pi
+            if diff[i][1] >= 0:
+                angles[i] += 180.0
+            else :
+                angles[i] -= 180.0
+    return angles
+
+def detectOutlier(inputs: np.ndarray, threshold: float = 1.0) -> np.ndarray:
+    median = np.median(inputs, axis = 0)
+    std = np.std(inputs, axis = 0)
+    mask = np.zeros_like(inputs)
+    # print(median, std)
+    for i in range(inputs.shape[0]):
+        if np.abs(inputs[i] - median) <= threshold * std:
+            mask[i] = 1
+    return mask

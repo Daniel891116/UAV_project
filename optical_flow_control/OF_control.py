@@ -183,7 +183,7 @@ try:
         
     cap.release()
     cv.destroyAllWindows()
-    change_mode(master, "LAND")
+    # change_mode(master, "LAND")
     control_signal = {'roll':0,'pitch':0,'throttle':0,'yaw':0}
     send_manual_command(master, control_signal)
     disarm(master)
