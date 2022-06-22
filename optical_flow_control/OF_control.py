@@ -12,6 +12,8 @@ from utils import OPMotion, camera_update
 from utils import change_mode, arm, disarm, takeoff, get_mode, send_manual_command, PID
 
 cap = cv.VideoCapture(0)
+cap.set(cv.CAP_PROP_FRAME_WIDTH, 320)
+cap.set(cv.CAP_PROP_FRAME_HEIGHT, 240)
 
 _maxFeature = 16
 
@@ -78,7 +80,7 @@ try:
     get_mode(master)
     control_signal = {'roll':0,'pitch':0,'throttle':580,'yaw':0}
     send_manual_command(master, control_signal)
-    time.sleep(10)
+    time.sleep(1)
     change_mode(master, "ALT_HOLD")
     get_mode(master)
 
@@ -88,7 +90,7 @@ try:
     # Take first frame and find corners in it
     ret, old_frame = cap.read()
     old_frame = cv.rotate(old_frame, cv.ROTATE_180)
-    old_frame = cv.resize(old_frame, (640, 480)) 
+    # old_frame = cv.resize(old_frame, (640, 480)) 
 
     # set camera intrinsic matrix
     camera_h = old_frame.shape[0]
@@ -122,7 +124,7 @@ try:
             break
         step += 1
         frame = cv.rotate(frame, cv.ROTATE_180)
-        frame = cv.resize(frame, (640, 480)) 
+        # frame = cv.resize(frame, (640, 480)) 
         new_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
         # calculate optical flow
         try:
@@ -166,7 +168,7 @@ try:
             a,b = new.ravel()
             c,d = old.ravel()
             # mask = cv.line(mask, (int(a),int(b)),(int(c),int(d)), color[i].tolist(), 2)
-            draw_frame = cv.circle(frame,(int(a),int(b)),5,color[i].tolist(),-1)
+            draw_frame = cv.circle(frame,(int(a),int(b)),2,color[i].tolist(),-1)
         # img = cv.add(draw_frame,mask)
         # cv.imshow('frame',img)
         cv.imshow('camera', draw_frame)
@@ -182,7 +184,7 @@ try:
         
     cap.release()
     cv.destroyAllWindows()
-    change_mode(master, "LAND")
+    # change_mode(master, "LAND")
     control_signal = {'roll':0,'pitch':0,'throttle':0,'yaw':0}
     send_manual_command(master, control_signal)
     disarm(master)
