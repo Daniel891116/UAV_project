@@ -44,6 +44,9 @@ ax = fig.gca(projection='3d')
 ax.set_xlabel('x')
 ax.set_ylabel('y')
 ax.set_zlabel('z')
+ax.set_xlim3d(-1000, 1000)
+ax.set_ylim3d(-1000, 1000)
+ax.set_zlim3d(-1000, 1000)
 ax.set_title('Trajectory of camera')
 
 origin_camera_pos = np.array([[0], [0], [0]], dtype = np.float64)
@@ -127,20 +130,16 @@ try:
         # frame = cv.resize(frame, (640, 480)) 
         new_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
         # calculate optical flow
-        try:
+        print(type(p0))
+        if len(p0) != 0:
             p1, st, err = cv.calcOpticalFlowPyrLK(old_gray, new_gray, p0, None, **lk_params)
             p1 = np.around(p1)
-        except:
-            break
-        # Select good points
-        try:
+            # Select good points
             good_new = p1[st==1]
             good_prev = p0[st==1]
-        except:
-            disarm(master)
-            msg = master.recv_match(type='COMMAND_ACK', blocking=True)
-            print(msg)
-            print("disarm")
+        else :
+            good_new = np.array([])
+            good_prev = np.array([])
 
         T = OPMotion(new_pts = good_new, prev_pts = good_prev)
         # origin_camera_pos += T
@@ -157,6 +156,7 @@ try:
                 print(f'control_signal:\n {control_signal}')
                 send_manual_command(master, control_signal)
         except:
+            print('PID error')
             break
         
         # origin_camera_pos = np.around(origin_camera_pos)
@@ -164,13 +164,16 @@ try:
         camera_pos.append(origin_camera_pos.copy())
         
         # draw the tracks
-        for i,(new,old) in enumerate(zip(good_new, good_prev)):
-            a,b = new.ravel()
-            c,d = old.ravel()
-            # mask = cv.line(mask, (int(a),int(b)),(int(c),int(d)), color[i].tolist(), 2)
-            draw_frame = cv.circle(frame,(int(a),int(b)),2,color[i].tolist(),-1)
-        # img = cv.add(draw_frame,mask)
-        # cv.imshow('frame',img)
+        if good_new.size != 0:
+            for i,(new,old) in enumerate(zip(good_new, good_prev)):
+                a,b = new.ravel()
+                c,d = old.ravel()
+                # mask = cv.line(mask, (int(a),int(b)),(int(c),int(d)), color[i].tolist(), 2)
+                draw_frame = cv.circle(frame,(int(a),int(b)),2,color[i].tolist(),-1)
+            # img = cv.add(draw_frame,mask)
+            # cv.imshow('frame',img)
+        else :
+            draw_frame = frame
         cv.imshow('camera', draw_frame)
 
         k = cv.waitKey(30) & 0xff
@@ -219,4 +222,4 @@ except KeyboardInterrupt:
     disarm(master)
     msg = master.recv_match(type='COMMAND_ACK', blocking=True)
     print(msg)
-    print("disarm")
+    print("disarm3")

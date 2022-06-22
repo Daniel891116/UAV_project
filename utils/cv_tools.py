@@ -34,15 +34,18 @@ def camera_init(camera_Dots, camera_pos: np.ndarray):
     
 def OPMotion(new_pts: np.ndarray, prev_pts: np.ndarray) -> np.ndarray:
     diff = new_pts - prev_pts
-    scales = LA.norm(diff, axis = -1)
-    scale_mask = detectOutlier(inputs = scales, threshold = 1.0)
-    angles = calAngle(diff = diff)
-    angle_mask = detectOutlier(inputs = angles, threshold = 1.0)
-    mask = scale_mask * angle_mask
-    diff_inlier = diff[mask == 1]
-    if len(diff_inlier) != 0:
-        camera_move = np.append(np.mean(diff_inlier, axis = 0), 0)
-    else:
+    if diff.size != 0:
+        scales = LA.norm(diff, axis = -1)
+        scale_mask = detectOutlier(inputs = scales, threshold = 1.0)
+        angles = calAngle(diff = diff)
+        angle_mask = detectOutlier(inputs = angles, threshold = 1.0)
+        mask = scale_mask * angle_mask
+        diff_inlier = diff[mask == 1]
+        if diff_inlier.size != 0:
+            camera_move = np.array([0, 0, 0]) if np.all(diff_inlier!=diff_inlier) else np.append(np.mean(diff_inlier, axis = 0), 0)
+        else :
+            camera_move = np.array([0, 0, 0])
+    else :
         camera_move = np.array([0, 0, 0])
     return camera_move[:, None]
 
