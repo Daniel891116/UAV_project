@@ -67,20 +67,20 @@ try:
 
     boot_time = time.time()
     print(f'boot time is {boot_time}')
-    # change_mode(master, "ALT_HOLD")
-    # arm(master)
-    # msg = master.recv_match(type='COMMAND_ACK', blocking=True)
-    # print(msg)
-    # change_mode(master, "GUIDED")
-    # get_mode(master)
-    # print('takeoff...')
-    # takeoff(master, 1)
-    # get_mode(master)
-    # control_signal = {'roll':0,'pitch':0,'throttle':580,'yaw':0}
-    # send_manual_command(master, control_signal)
-    # time.sleep(10)
-    # change_mode(master, "ALT_HOLD")
-    # get_mode(master)
+    change_mode(master, "ALT_HOLD")
+    arm(master)
+    msg = master.recv_match(type='COMMAND_ACK', blocking=True)
+    print(msg)
+    change_mode(master, "GUIDED")
+    get_mode(master)
+    print('takeoff...')
+    takeoff(master, 1)
+    get_mode(master)
+    control_signal = {'roll':0,'pitch':0,'throttle':580,'yaw':0}
+    send_manual_command(master, control_signal)
+    time.sleep(10)
+    change_mode(master, "ALT_HOLD")
+    get_mode(master)
 
     xPID = PID()
     yPID = PID()
@@ -130,7 +130,6 @@ try:
             p1 = np.around(p1)
         except:
             break
-        # p1 = np.around(p1)
         # Select good points
         try:
             good_new = p1[st==1]
@@ -142,14 +141,14 @@ try:
             print("disarm")
 
         T = OPMotion(new_pts = good_new, prev_pts = good_prev)
-        origin_camera_pos += T
+        # origin_camera_pos += T
         # PID control
         try:
             if not PID_disable:
                 # update camera position
                 origin_camera_pos += T
-                xc = xPID.correct(-origin_camera_pos[0][0],P=0.5,I=1e-3, D=0)#1e-5,D=2e-1)
-                yc = yPID.correct( origin_camera_pos[1][0],P=0.5,I=1e-3, D=0)#1e-5,D=2e-1)
+                xc = xPID.correct(-origin_camera_pos[0][0],P=0.2,I=1e-3, D=0)#1e-5,D=2e-1)
+                yc = yPID.correct( origin_camera_pos[1][0],P=0.2,I=1e-3, D=0)#1e-5,D=2e-1)
                 print(f'Input:\n x: {-origin_camera_pos[0][0]}, y:{origin_camera_pos[1][0]}')
                 control_signal['pitch'] = -yc
                 control_signal['roll'] = -xc
@@ -183,7 +182,7 @@ try:
         
     cap.release()
     cv.destroyAllWindows()
-    # change_mode(master, "LAND")
+    change_mode(master, "LAND")
     control_signal = {'roll':0,'pitch':0,'throttle':0,'yaw':0}
     send_manual_command(master, control_signal)
     disarm(master)
