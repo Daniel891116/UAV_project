@@ -214,12 +214,12 @@ try:
     except:
         pass
 
-    # gif_save = str(input("want to save this GIF?:[y/n]"))
-    # if gif_save == 'y':
-    #     print('GIF is saving...')
-    #     ani.save('Camera_movement.gif', writer = 'pillow', fps = 1/0.08)
-    # else:
-    #     pass
+    gif_save = str(input("want to save this GIF?:[y/n]"))
+    if gif_save == 'y':
+        print('GIF is saving...')
+        ani.save('Camera_movement.gif', writer = 'pillow', fps = 1/0.08)
+    else:
+        pass
 
     PID_feedback = np.array(PID_feedback)
     fig, ax = plt.subplots(2, 1, sharex = 'all')
@@ -228,18 +228,17 @@ try:
     PID_ax_roll = ax[0].twinx()
     ax[0].plot(-camera_pos[:, 0], 'r-o', markersize = 1)
     PID_ax_roll.plot(PID_feedback[:, 0], 'b-o', markersize = 1)
-    ax[0].xlabel('step')
-    ax[0].ylabel('pixel')
-    PID_ax_roll.ylabel('roll')
+    ax[0].set_ylabel('pixel')
+    PID_ax_roll.set_ylabel('roll')
 
     ax[1].set_title('y pos control')
     # ax[1].legend(['y pos', 'pitch correction'], loc = "lower right")
     PID_ax_pitch = ax[1].twinx()
     ax[1].plot(camera_pos[:, 1], 'r-o', markersize = 1)
     PID_ax_pitch.plot(PID_feedback[:, 1], 'b-o', markersize = 1)
-    ax[0].xlabel('step')
-    ax[0].ylabel('pixel')
-    PID_ax_roll.ylabel('roll')
+    ax[1].set_xlabel('step')
+    ax[1].set_ylabel('pixel')
+    PID_ax_pitch.set_ylabel('pitch')
     
     plt.savefig('PID response.png')
     plt.show()
