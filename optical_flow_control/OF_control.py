@@ -44,14 +44,15 @@ ax = fig.gca(projection='3d')
 ax.set_xlabel('x')
 ax.set_ylabel('y')
 ax.set_zlabel('z')
-ax.set_xlim3d(-1000, 1000)
-ax.set_ylim3d(-1000, 1000)
-ax.set_zlim3d(-1000, 1000)
+# ax.set_xlim3d(-1000, 1000)
+# ax.set_ylim3d(-1000, 1000)
+# ax.set_zlim3d(-1000, 1000)
 ax.set_title('Trajectory of camera')
 
 origin_camera_pos = np.array([[0], [0], [0]], dtype = np.float64)
 
 camera_pos = []
+PID_feedback = []
 control_signal = {'roll':0,'pitch':0,'throttle':500,'yaw':0}
 PID_disable = True
 # ========================================================================
@@ -125,15 +126,14 @@ try:
         ret,frame = cap.read()
         if not ret:
             break
-        step += 1
         frame = cv.rotate(frame, cv.ROTATE_180)
         # frame = cv.resize(frame, (640, 480)) 
         new_gray = cv.cvtColor(frame, cv.COLOR_BGR2GRAY)
         # calculate optical flow
-        print(type(p0))
-        if len(p0) != 0:
+        # print(type(p0))
+        if type(p0) != type(None) and len(p0) != 0:
             p1, st, err = cv.calcOpticalFlowPyrLK(old_gray, new_gray, p0, None, **lk_params)
-            p1 = np.around(p1)
+            # p1 = np.around(p1)
             # Select good points
             good_new = p1[st==1]
             good_prev = p0[st==1]
@@ -142,26 +142,28 @@ try:
             good_prev = np.array([])
 
         T = OPMotion(new_pts = good_new, prev_pts = good_prev)
-        # origin_camera_pos += T
         # PID control
         try:
             if not PID_disable:
                 # update camera position
+                step += 1
                 origin_camera_pos += T
                 xc = xPID.correct(-origin_camera_pos[0][0],P=0.2,I=1e-3, D=0)#1e-5,D=2e-1)
                 yc = yPID.correct( origin_camera_pos[1][0],P=0.2,I=1e-3, D=0)#1e-5,D=2e-1)
                 print(f'Input:\n x: {-origin_camera_pos[0][0]}, y:{origin_camera_pos[1][0]}')
                 control_signal['pitch'] = -yc
                 control_signal['roll'] = -xc
-                print(f'control_signal:\n {control_signal}')
+                print(f'control_signal: \n{control_signal}')
+                # print(f'roll: {control_signal['roll']}, pitch: {control_signal['pitch']}')
                 send_manual_command(master, control_signal)
+                camera_pos.append(origin_camera_pos.copy())
+                PID_feedback.append([control_signal['roll'], control_signal['pitch']])
         except:
             print('PID error')
             break
         
-        # origin_camera_pos = np.around(origin_camera_pos)
         # print(f'[{step}]pos:\n{T}')
-        camera_pos.append(origin_camera_pos.copy())
+        
         
         # draw the tracks
         if good_new.size != 0:
@@ -211,12 +213,28 @@ try:
         plt.show()
     except:
         pass
+
     # gif_save = str(input("want to save this GIF?:[y/n]"))
     # if gif_save == 'y':
     #     print('GIF is saving...')
-    #     ani.save('Camera_movement.gif', writer = 'pillow', fps = 1/0.04)
+    #     ani.save('Camera_movement.gif', writer = 'pillow', fps = 1/0.08)
     # else:
     #     pass
+
+    PID_feedback = np.array(PID_feedback)
+    fig, ax = plt.subplots(2, 1, sharex = 'all')
+    ax[0].set_title('x pos control')
+    ax[0].legend(['x pos', 'roll correction'], loc = "lower right")
+    ax[0].plot(-camera_pos[:, 0], 'r-o', markersize = 1)
+    ax[0].plot(PID_feedback[:, 0], 'b-o', markersize = 1)
+    ax[1].set_title('y pos control')
+    ax[1].legend(['y pos', 'pitch correction'], loc = "lower right")
+    ax[1].plot(camera_pos[:, 1], 'r-o', markersize = 1)
+    ax[1].plot(PID_feedback[:, 1], 'b-o', markersize = 1)
+    plt.savefig('PID response.png')
+    plt.show()
+
+    
 except KeyboardInterrupt:
     control_signal = {'roll':0,'pitch':0,'throttle':0,'yaw':0}
     disarm(master)
